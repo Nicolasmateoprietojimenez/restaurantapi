@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from .models import db, Restaurante, Mesa, Cliente, Reserva, Comentario, Foto
 from werkzeug.security import generate_password_hash
 from datetime import datetime
+from werkzeug.security import check_password_hash
 
 crud_bp = Blueprint('crud', __name__)
 
@@ -172,8 +173,6 @@ def crud_reservas():
             'restaurante_id': r.restaurante_id,
             'mesa_id': r.mesa_id,
             'fecha': r.fecha.isoformat() if r.fecha else None,
-            'hora_inicio': r.hora_inicio.strftime('%H:%M') if r.hora_inicio else None,
-            'hora_fin': r.hora_fin.strftime('%H:%M') if r.hora_fin else None,
             'comentarios': r.comentarios,
             'estado': r.estado
         } for r in reservas])
@@ -229,11 +228,12 @@ def crud_reservas():
             comentarios=data.get('comentarios'),
             estado=data.get('estado', 'confirmada')
         )
+        mesa = Mesa.query.get(mesa_id)
+        if mesa:
+            mesa.estado = 'ocupada'
         db.session.add(reserva)
         db.session.commit()
         return jsonify({'mensaje': 'Reserva creada', 'id': reserva.id}), 201
-
-
 
     elif request.method == 'PUT':
         data = request.get_json()
@@ -253,8 +253,9 @@ def crud_reservas():
             return jsonify({'error': 'ID requerido para eliminar'}), 400
         reserva = Reserva.query.get_or_404(id)
         reserva.estado = 'cancelada'
+        db.session.delete(reserva)
         db.session.commit()
-        return jsonify({'mensaje': 'Reserva cancelada (soft delete)'})
+        return jsonify({'mensaje': 'Reserva cancelada '})
     
 #Endpoint crud comentarios    
 @crud_bp.route('/comentarios', methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -370,7 +371,7 @@ def crud_fotos():
         return jsonify({'mensaje': 'Foto eliminada'})
 
 
-
+# Lista de restaurantes con información completa
 @crud_bp.route('/restaurante/<int:id>', methods=['GET'])
 def obtener_restaurante(id):
     restaurante = Restaurante.query.get_or_404(id)
@@ -401,5 +402,28 @@ def obtener_restaurante(id):
             'url': f.url,
             'tipo': f.tipo,
             'descripcion': f.descripcion
-        } for f in restaurante.fotos]
+        } for f in restaurante.fotos],
+        'mesas_disponibles': [{
+            'id': m.id,
+            'numero': m.numero,
+            'capacidad': m.capacidad,
+            'ubicacion': m.ubicacion,
+            'estado': m.estado
+        } for m in restaurante.mesas if m.estado == 'libre']
     })
+
+@crud_bp.route('/login', methods=['POST'])
+def login_cliente():
+    data = request.get_json()
+    email = data.get('email')
+    contrasena = data.get('contrasena')
+
+    if not email or not contrasena:
+        return jsonify({'error': 'Email y contraseña son requeridos'}), 400
+
+    cliente = Cliente.query.filter_by(email=email, estado='activo').first()
+
+    if not cliente or not check_password_hash(cliente.contrasena, contrasena):
+        return jsonify({'error': 'Credenciales inválidas'}), 401
+
+    return jsonify({'mensaje': 'Login exitoso', 'cliente_id': cliente.id})
