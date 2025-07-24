@@ -1,0 +1,156 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+  <div class="container mt-4">
+    <h2>Estadísticas del Sistema</h2>
+    <div>
+        <div class="row mt-3">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Restaurantes</h5>
+                <p class="card-text">{{ total_restaurantes }}</p>
+            </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Mesas</h5>
+                <p class="card-text">{{ total_mesas }}</p>
+            </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Clientes</h5>
+                <p class="card-text">{{ total_clientes }}</p>
+            </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Reservas</h5>
+                <p class="card-text">{{ total_reservas }}</p>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <h3 class="mt-4">Gráficas</h3>
+    <div class="row">
+      <div class="col-md-6">
+        <h5>Top 5 Restaurantes con más Reservas</h5>
+        <canvas id="reservasChart"></canvas>
+      </div>
+      <div class="col-md-6">
+        <h5>Clientes por Restaurante</h5>
+        <canvas id="clientesChart"></canvas>
+      </div>
+    </div>
+
+    <div class="row align-items-center mt-4">
+    <div class="col-md-6">
+        <h5>Restaurantes mejor valorados</h5>
+        <canvas id="topValoradosChart" style="max-height: 250px;"></canvas>
+    </div>
+    <div class="col-md-6 d-flex justify-content-center">
+        <div>
+        <h5 class="text-center">Estado de las Mesas</h5>
+        <canvas id="estadoMesasChart" width="200" height="200"></canvas>
+        </div>
+    </div>
+    </div>
+
+
+
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h5>Clientes Estelares (Con mas reservas en la aplicación) </h5>
+            <canvas id="topClientesChart"></canvas>
+        </div>
+    </div>
+
+
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const reservasChart = new Chart(document.getElementById('reservasChart'), {
+      type: 'bar',
+      data: {
+        labels: {{ top_restaurantes_nombres|tojson }},
+        datasets: [{
+          label: 'Reservas',
+          data: {{ top_restaurantes_reservas|tojson }},
+          backgroundColor: 'rgba(0, 123, 255, 0.7)'
+        }]
+      }
+    });
+
+    const clientesChart = new Chart(document.getElementById('clientesChart'), {
+      type: 'bar',
+      data: {
+        labels: {{ clientes_restaurantes_nombres|tojson }},
+        datasets: [{
+          label: 'Clientes únicos',
+          data: {{ clientes_restaurantes_cantidad|tojson }},
+          backgroundColor: 'rgba(220, 53, 69, 0.7)'
+        }]
+      }
+    });
+
+    new Chart(document.getElementById('topClientesChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ top_clientes_nombres|tojson }},
+        datasets: [{
+        label: 'Reservas',
+        data: {{ top_clientes_reservas|tojson }},
+        backgroundColor: 'rgba(40, 167, 69, 0.7)'
+        }]
+    },
+    options: {
+        indexAxis: 'y'
+    }
+    });
+
+    new Chart(document.getElementById('topValoradosChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ top_valorados_nombres|tojson }},
+        datasets: [{
+        label: 'Calificación promedio',
+        data: {{ top_valorados_promedios|tojson }},
+        backgroundColor: '	rgba(255, 193, 7, 0.7)'
+        }]
+    },
+    options: {
+        scales: {
+        y: {
+            beginAtZero: true,
+            max: 5
+        }
+        }
+    }
+});
+
+new Chart(document.getElementById('estadoMesasChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ mesas_estados_labels|tojson }},
+    datasets: [{
+      label: 'Mesas',
+      data: {{ mesas_estados_valores|tojson }},
+      backgroundColor: ['#dc3545', '#007bff', '#ffc107', '#dc3545', '#6f42c1']
+    }]
+  }
+});
+    </script>
+{% endblock %}

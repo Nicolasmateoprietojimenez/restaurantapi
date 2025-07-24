@@ -192,7 +192,9 @@ def crud_reservas():
             fecha = datetime.fromisoformat(fecha_str).date()
         except ValueError:
             return jsonify({'error': 'Formato de fecha inválido. Usa YYYY-MM-DD'}), 400
-
+        if fecha < datetime.now().date():
+            return jsonify({'error': 'No puedes hacer reservas en fechas pasadas'}), 400
+        
         # Validación 1: la mesa ya está reservada ese día
         reserva_existente = Reserva.query.filter_by(
             mesa_id=mesa_id,
@@ -219,6 +221,19 @@ def crud_reservas():
         if reservas_totales >= 20:
             return jsonify({'error': 'Ya se alcanzó el máximo de 20 reservas globales para ese día'}), 400
 
+        # Validación 4: el cliente ya tiene una reserva ese día en el restaurante
+        reserva_cliente = Reserva.query.filter_by(
+            cliente_id=cliente_id,
+            restaurante_id=restaurante_id,
+            fecha=fecha
+        ).filter(Reserva.estado != 'cancelada').first()
+
+        if reserva_cliente:
+            return jsonify({'error': 'Ya tienes una reserva en este restaurante para ese día'}), 400
+
+        if reserva_cliente:
+            return jsonify({'error': 'Ya tienes una reserva registrada para ese día'}), 400
+        
         # Crear reserva si pasó todas las validaciones
         reserva = Reserva(
             cliente_id=cliente_id,
